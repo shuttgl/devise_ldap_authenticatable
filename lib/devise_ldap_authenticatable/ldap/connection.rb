@@ -24,6 +24,7 @@ module Devise
 
         @group_base = ldap_config["group_base"]
         @check_group_membership = ldap_config.has_key?("check_group_membership") ? ldap_config["check_group_membership"] : ::Devise.ldap_check_group_membership
+        @check_group_membership_using_login = ldap_config.has_key?("check_group_membership_using_login") ? ldap_config["check_group_membership_using_login"] : ::Devise.ldap_check_group_membership_using_login
         @check_group_membership_without_admin = ldap_config.has_key?("check_group_membership_without_admin") ? ldap_config["check_group_membership_without_admin"] : ::Devise.ldap_check_group_membership_without_admin
         @required_groups = ldap_config["required_groups"]
         @group_membership_attribute = ldap_config.has_key?("group_membership_attribute") ? ldap_config["group_membership_attribute"] : "uniqueMember"
@@ -156,7 +157,7 @@ module Devise
 
         unless ::Devise.ldap_ad_group_check
           group_checking_ldap.search(:base => group_name, :scope => Net::LDAP::SearchScope_BaseObject) do |entry|
-            if entry[group_attribute].include? dn
+            if entry[group_attribute].include? (@check_group_membership_using_login ? @login : dn)
               in_group = true
               DeviseLdapAuthenticatable::Logger.send("User #{dn} IS included in group: #{group_name}")
             end
