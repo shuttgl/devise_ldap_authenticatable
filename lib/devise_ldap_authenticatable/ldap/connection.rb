@@ -230,8 +230,14 @@ module Devise
           admin_ldap = Connection.admin
         end
 
-        DeviseLdapAuthenticatable::Logger.send("Getting groups for #{dn}")
-        filter = Net::LDAP::Filter.eq(@group_membership_attribute, dn)
+        if @check_group_membership_using_login
+          user_dn = @login
+        else
+          user_dn = dn
+        end
+
+        DeviseLdapAuthenticatable::Logger.send("Getting groups for #{user_dn}")
+        filter = Net::LDAP::Filter.eq(@group_membership_attribute, user_dn)
         admin_ldap.search(:filter => filter, :base => @group_base).collect(&:dn)
       end
 
