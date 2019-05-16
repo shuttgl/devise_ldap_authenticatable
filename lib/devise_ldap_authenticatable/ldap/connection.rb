@@ -155,28 +155,34 @@ module Devise
           group_checking_ldap = Connection.admin
         end
 
+        if @check_group_membership_using_login
+          user_dn = @login
+        else
+          user_dn = dn
+        end
+
         unless ::Devise.ldap_ad_group_check
           group_checking_ldap.search(:base => group_name, :scope => Net::LDAP::SearchScope_BaseObject) do |entry|
-            if entry[group_attribute].include? (@check_group_membership_using_login ? @login : dn)
+            if entry[group_attribute].include? user_dn
               in_group = true
-              DeviseLdapAuthenticatable::Logger.send("User #{dn} IS included in group: #{group_name}")
+              DeviseLdapAuthenticatable::Logger.send("User #{user_dn} IS included in group: #{group_name}")
             end
           end
         else
           # AD optimization - extension will recursively check sub-groups with one query
           # "(memberof:1.2.840.113556.1.4.1941:=group_name)"
-          search_result = group_checking_ldap.search(:base => dn,
+          search_result = group_checking_ldap.search(:base => user_dn,
                             :filter => Net::LDAP::Filter.ex("memberof:1.2.840.113556.1.4.1941", group_name),
                             :scope => Net::LDAP::SearchScope_BaseObject)
           # Will return  the user entry if belongs to group otherwise nothing
-          if search_result.length == 1 && search_result[0].dn.eql?(dn)
+          if search_result.length == 1 && search_result[0].dn.eql?(user_dn)
             in_group = true
-            DeviseLdapAuthenticatable::Logger.send("User #{dn} IS included in group: #{group_name}")
+            DeviseLdapAuthenticatable::Logger.send("User #{user_dn} IS included in group: #{group_name}")
           end
         end
 
         unless in_group
-          DeviseLdapAuthenticatable::Logger.send("User #{dn} is not in group: #{group_name}")
+          DeviseLdapAuthenticatable::Logger.send("User #{user_dn} is not in group: #{group_name}")
         end
 
         return in_group
